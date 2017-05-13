@@ -1,0 +1,74 @@
+How to write UDF function in Hive?
+
+1.Create Java class for User Defined Function which extends ora.apache.hadoop.hive.sq.exec.UDF amd implement more than one evaluate() methods and put your desisred logic and you are almost there.
+2.Package your Java class into JAR file (I am using maven)
+3.Go to Hive CLI – ADD your JAR, verify your JARs in Hive CLI classpath
+4.CREATE TEMPORARY FUNCTION in hive which points to your Java class
+5.Use it in Hive SQL 
+
+01.Create Java class for User Defined Function
+
+package org.ashwin.letsdobigdata;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.hive.ql.exec.UDF;
+import org.apache.hadoop.io.Text;
+
+public class Strip extends UDF {
+
+private Text result = new Text();
+ public Text evaluate(Text str, String stripChars) {
+ if(str == null) {
+ return null;
+ }
+ result.set(StringUtils.strip(str.toString(), stripChars));
+ return result;
+ }
+ public Text evaluate(Text str) {
+ if(str == null) {
+ return null;
+ }
+ result.set(StringUtils.strip(str.toString()));
+ return result;
+ }
+}
+
+2.Package your Java class into JAR
+
+There is a pom.xml attached in Github, please make sure you have maven installed. If you are working with Github clone Go to shell
+
+$ cd HiveUDFs
+and run mvn clean package – this will create a JAR file which contains our UDF class. Copy the JAR path.
+
+3. Go to Hive CLI and ADD UDF JAR 
+
+hive> ADD /home/cloudera/workspace/HiveUDFs/target/HiveUDFs-0.0.1-SNAPSHOT.jar;
+Added [/home/cloudera/workspace/HiveUDFs/target/HiveUDFs-0.0.1-SNAPSHOT.jar] to class path
+Added resources: [/home/cloudera/workspace/HiveUDFs/target/HiveUDFs-0.0.1-SNAPSHOT.jar]
+
+4. Verify JAR is in Hive CLI Classpath
+
+You should see your jar in the list.
+
+hive> list jars;
+/usr/lib/hive/lib/hive-contrib.jar
+/home/cloudera/workspace/HiveUDFs/target/HiveUDFs-0.0.1-SNAPSHOT.jar
+
+5. Create Temporary Function
+
+It does not have to be temporary function, you can create your own function, but just to keep things moving, go ahead and create temporary function
+
+You may want to add ADD JAR and CREATE TEMPORARY FUNCTION to .hiverc file and it will execute beginning of each hive session.
+
+6. UDF Output
+first query strips ‘ha’ from string ‘hadoop’ as expected (2 argument evaluate() in code)
+
+second query strips trailing and leading spaces as expected.
+
+hive> CREATE TEMPORARY FUNCTION STRIP AS 'org.hardik.letsdobigdata.Strip';
+ hive> select strip('hadoop','ha') from dummy;
+ OK
+ doop
+ Time taken: 0.131 seconds, Fetched: 1 row(s)
+ hive> select strip('   hiveUDF ') from dummy;
+ OK
+ hiveUDF
